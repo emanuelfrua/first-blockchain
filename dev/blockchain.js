@@ -1,4 +1,5 @@
-const sha256 = require('sha256')
+const sha256 = require('sha256');
+const currentNodeUrl = process.argv[3];
 
 class Blockchain {
 
@@ -6,6 +7,8 @@ class Blockchain {
         this.chain = []; // All the blocks created of mined will stay here.
         this.pendingTransactions = []; // Hold all the new transactions before placed in a block. This transactions are not write in stone yet, they're not in our blockchain yer.
         // It can be write in our blockchain when a new Block is mined and created.
+        this.currentNodeUrl = currentNodeUrl;
+        this.networkNodes = []; // All the nodes urls in our network, so al the node will be aware of other nodes
 
         this.createNewBlock(100, '0', '0'); // Genesis Block, it could arbitrary data, but it's the first block
     }

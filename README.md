@@ -35,11 +35,13 @@ new node call -> '/register-nodes-bulk' to register all the nodes already regist
 
 npm install request-promise --save // Allow to make request to another nodes
 
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "node_1": "nodemon --watch dev -e js dev/networkNode.js 3001 http:\\localhost:3001",
-    "node_2": "nodemon --watch dev -e js dev/networkNode.js 3002 http:\\localhost:3002",
-    "node_3": "nodemon --watch dev -e js dev/networkNode.js 3003 http:\\localhost:3003",
-    "node_4": "nodemon --watch dev -e js dev/networkNode.js 3004 http:\\localhost:3004",
-    "node_5": "nodemon --watch dev -e js dev/networkNode.js 3005 http:\\localhost:3005"
-  },
+I have to sinchronize nodes, transactions, blocks that are mined.
+
+ENDPOINTS:
+/blockchain
+/transaction
+/mine
+/transaction/broadcast // Create a new transaction and then broadcast the new transaction
+to the network via /transaction
+
+/mine // create a new block and then broadcast the new block to our network via /receive-new-block //

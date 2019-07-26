@@ -1,5 +1,6 @@
 const sha256 = require('sha256');
 const currentNodeUrl = process.argv[3];
+const uuid = require('uuid/v1');
 
 class Blockchain {
 
@@ -10,7 +11,7 @@ class Blockchain {
         this.currentNodeUrl = currentNodeUrl;
         this.networkNodes = []; // All the nodes urls in our network, so al the node will be aware of other nodes
 
-        this.createNewBlock(100, '0', '0'); // Genesis Block, it could arbitrary data, but it's the first block
+        this.createNewBlock(100, '0', '0'); // Genesis Block, it could arbitrary data, but it's the first block..
     }
 
     createNewBlock(nonce, previousBlockHash, hash) {
@@ -37,12 +38,17 @@ class Blockchain {
         const newTransaction = {
             amount: amount,
             sender: sender, // The sender Address
-            recipient: recipient
+            recipient: recipient,
+            transactionId: uuid().split('-').join('') // Create a unique transaction ID
         };
 
-        this.pendingTransactions.push(newTransaction);
+        return newTransaction;
+    }
 
-        return this.getLastBlock()['index'] + 1; // Return the number of the block that this transaction will be added.
+    addTransactionToPendingTransactions(transactionObj) {
+        this.pendingTransactions.push(transactionObj);
+        return this.getLastBlock()['index'] + 1;
+
     }
 
     // Hashing parameters

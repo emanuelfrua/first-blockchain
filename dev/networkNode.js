@@ -28,11 +28,34 @@ app.get('/blockchain', function (req, res) { // To get the entire blockchain
 });
 
 app.post('/transaction', function (req, res) { // To create a new transaction in our blockchain
-    const amount = req.body.amount;
-    const sender = req.body.sender;
-    const recipient = req.body.recipient;
-    const blockIndex = bitcoin.createNewTransaction(amount, sender, recipient);
-    res.json({note: `Transaction will be added in block ${blockIndex}.`})
+    const newTransaction = req.body;
+    const blockIndex = bitcoin.addTransactionToPendingTransactions(newTransaction);
+    res.json({note: `Transaction will be added in block ${blockIndex}.`});
+});
+
+
+// Create a new transaction and broadcast the new transaction to all the other nodes
+app.post('/transaction/broadcast', function (req, res) {
+    const newTransaction = bitcoin.createNewTransaction(req.body.amount, req.body.sender, req.body.recipient);
+    bitcoin.addTransactionToPendingTransactions(newTransaction);
+
+    const requestPromises = [];
+    bitcoin.networkNodes.forEach(networkNodeUrl => {
+        const requestOptions = {
+            uri: networkNodeUrl + '/transaction',
+            method: 'POST',
+            body: newTransaction,
+            json: true
+        };
+
+        requestPromises.push(rp(requestOptions));
+    });
+
+    Promise.all(requestPromises)
+        .then(data => {
+            res.json({note: 'Transaction created and broadcast successfully.'});
+        })
+
 });
 
 app.get('/mine', function (req, res) { // It will mine a new block or create a new block for us
@@ -45,13 +68,65 @@ app.get('/mine', function (req, res) { // It will mine a new block or create a n
     const nonce = bitcoin.proofOfWork(previousBlockHash, currentBlockData);
     const blockHash = bitcoin.hashBlock(previousBlockHash, currentBlockData, nonce);
 
-    bitcoin.createNewTransaction(12.5, '00', nodeAddress); // We put 00 in the sender to identify that it's a mined reward, and the recipient is the node that is gonna be rewarded
-
     const newBlock = bitcoin.createNewBlock(nonce, previousBlockHash, blockHash);
-    res.json({
-        note: "New Block mined successfully",
-        block: newBlock
+
+    const requestPromises = [];
+    bitcoin.networkNodes.forEach(networkNodeUrl => {
+        const requestOptions = {
+            uri: networkNodeUrl + '/receive/new/block',
+            method: 'POST',
+            body: {newBlock: newBlock},
+            json: true
+        };
+
+        requestPromises.push(rp(requestOptions));
     });
+
+    Promise.all(requestPromises) // run all the requests
+        .then(data => { // then when they have ended, do this calculation
+            const requestOptions = {
+                uri: bitcoin.currentNodeUrl + '/transaction/broadcast',
+                method: 'POST',
+                body: { // We put 00 in the sender to identify that it's a mined reward, and the recipient is the node that is gonna be rewarded
+
+                    amount: 12.5,
+                    sender: "00",
+                    recipient: nodeAddress
+                },
+                json: true
+            };
+
+            return rp(requestOptions);
+        })
+        .then(data => { // and when the calculation has ended return the newblock response
+            res.json({
+                note: "New Block mined & broadcast successfully",
+                block: newBlock
+            });
+        });
+});
+
+// Receive the new block from our broadcast
+app.post('/receive-new-block', function (req, res) {
+    const newBlock = req.body.newBlock;
+    const lastBlock = bitcoin.getLastBlock();
+    const correctHash = (lastBlock.hash === newBlock.previousBlockHash);
+    const correctIndex = ((lastBlock['index'] + 1) === newBlock['index']);
+
+    if (correctHash && correctIndex) {
+        bitcoin.chain.push(newBlock);
+        bitcoin.pendingTransactions = [];
+        res.json({
+            note: 'New Block received and accepted.',
+            newBlock: newBlock
+        }):
+    } else {
+        res.json({
+            note: 'New block rejected',
+            newBlock: newBlock
+        })
+    }
+
 });
 
 // First Stage

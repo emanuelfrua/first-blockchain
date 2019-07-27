@@ -119,7 +119,7 @@ app.post('/receive-new-block', function (req, res) {
         res.json({
             note: 'New Block received and accepted.',
             newBlock: newBlock
-        }):
+        });
     } else {
         res.json({
             note: 'New block rejected',

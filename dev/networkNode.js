@@ -62,7 +62,7 @@ app.get('/mine', function (req, res) { // It will mine a new block or create a n
     const lastBlock = bitcoin.getLastBlock();
     const previousBlockHash = lastBlock['hash'];
     const currentBlockData = {
-        transaction: bitcoin.pendingTransactions,
+        transactions: bitcoin.pendingTransactions,
         index: lastBlock['index'] + 1
     };
     const nonce = bitcoin.proofOfWork(previousBlockHash, currentBlockData);
@@ -73,7 +73,7 @@ app.get('/mine', function (req, res) { // It will mine a new block or create a n
     const requestPromises = [];
     bitcoin.networkNodes.forEach(networkNodeUrl => {
         const requestOptions = {
-            uri: networkNodeUrl + '/receive/new/block',
+            uri: networkNodeUrl + '/receive-new-block',
             method: 'POST',
             body: {newBlock: newBlock},
             json: true

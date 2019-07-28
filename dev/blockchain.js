@@ -114,6 +114,68 @@ class Blockchain {
 
         return validChain;
     }
+
+    // Iterate throw the blockchain and find the blockhash and return the block
+    getBlock(blockHash) {
+        let correctBlock = null;
+        this.chain.forEach(block => {
+            if (block.hash === blockHash) {
+                correctBlock = block;
+            }
+        });
+        return correctBlock;
+    }
+
+    // Get the transaction searching throw the transaction Id inside every block and transaction array
+    getTransaction(transactionId) {
+        let correctTransaction = null;
+        let correctBlock = null;
+        this.chain.forEach(block => {
+            block.transactions.forEach(transaction => {
+                if (transaction.transactionId === transactionId) {
+                    correctTransaction = transaction;
+                    correctBlock = block;
+                }
+            });
+        });
+
+        console.log('142')
+        console.log({
+            transaction: correctTransaction,
+            block: correctBlock
+        })
+        return {
+            transaction: correctTransaction,
+            block: correctBlock
+        };
+    }
+
+    // Find all the transactions that have a specific address as a Sender or Recipient, and return them with the balance
+    getAddressData(address) {
+        const addressTransactions = [];
+        this.chain.forEach(block => {
+            block.transactions.forEach(transaction => {
+                if (transaction.sender === address || transaction.recipient === address) {
+                    addressTransactions.push(transaction);
+                }
+            });
+        });
+
+        let balance = 0;
+        addressTransactions.forEach(transaction => {
+            if (transaction.recipient === address) {
+                balance += transaction.amount;
+            }
+            if (transaction.sender === address) {
+                balance -= transaction.amount;
+            }
+        });
+
+        return {
+            addressTransactions: addressTransactions,
+            addressBalance: balance
+        };
+    }
 }
 
 

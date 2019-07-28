@@ -35,7 +35,7 @@ app.post('/transaction', function (req, res) { // To create a new transaction in
 
 
 // Create a new transaction and broadcast the new transaction to all the other nodes
-app.post('/transaction/broadcast', function (req, res) {
+app.post('/transaction/broadcast', function (req, res) { // We need to make sure that the sender or recipient have the correct amount of bitcoins
     const newTransaction = bitcoin.createNewTransaction(req.body.amount, req.body.sender, req.body.recipient);
     bitcoin.addTransactionToPendingTransactions(newTransaction);
 
@@ -193,6 +193,97 @@ app.post('/register-nodes-bulk', function (req, res) {
     });
 
     res.json({note: 'Bulk registration successful.'});
+});
+
+// This consensus use the longest chain rule
+// Make a request to every other node, and get their blockchain to be compared with the blockchain with the current node we are now
+app.get('/consensus', function (req, res) {
+    console.log('#200');
+
+    const requestPromises = [];
+    bitcoin.networkNodes.forEach(networkNodeUrl => {
+        const requestOptions = {
+            uri: networkNodeUrl + '/blockchain',
+            method: 'GET',
+            json: true
+        };
+        console.log(networkNodeUrl + '/blockchain');
+        requestPromises.push(rp(requestOptions));
+    });
+    Promise.all(requestPromises)
+        .then(blockchains => { // Array with all of the other blockchains in the network
+            const currentChainLength = bitcoin.chain.length;
+            let maxChainLength = currentChainLength;
+            let newLongestChain = null;
+            let newPendingTransactions = null;
+
+            blockchains.forEach(blockchain => { // Identify if one of the blockchains in the other nodes network is longer than the one hosted in our current node
+                if (blockchain.chain.length > maxChainLength) {
+                    // This is data we need to replace the chain in our current blockchain node
+                    maxChainLength = blockchain.chain.length;
+                    newLongestChain = blockchain.chain;
+                    newPendingTransactions = blockchain.pendingTransactions;
+                }
+            });
+
+            // If the isn't a longest blockchain or that longestchain isn't valid, return
+            if (!newLongestChain || (newLongestChain && !bitcoin.chainIsValid(newLongestChain))) {
+                res.json({
+                    note: 'current chain has not been replace',
+                    chain: bitcoin.chain
+                });
+            } else {
+                bitcoin.chain = newLongestChain;
+                bitcoin.pendingTransactions = newPendingTransactions;
+                res.json({
+                    note: 'This chain has been replaced.',
+                    chain: bitcoin.chain
+                });
+            }
+        });
+
+});
+
+// Send the blockHash and return the corresponding block
+app.get('/block/:blockHash', function (req, res) { // localhost:3001/block/alkdjfl2kj2lk453jf22
+    const blockHash = req.params.blockHash;
+    const correctBlock = bitcoin.getBlock(blockHash);
+    res.json({
+        block: correctBlock
+    });
+
+
+});
+
+// Send the transaction ID and get the corresponding transaction
+app.get('/transaction/:transactionId', function (req, res) {
+    const transactionId = req.params.transactionId;
+    const transactionData = bitcoin.getTransaction(transactionId);
+    console.log('262')
+    console.log({
+        transactionId: transactionData.transaction,
+        block: transactionData.block
+    })
+    res.json({
+        transaction: transactionData.transaction,
+        block: transactionData.block
+    });
+
+});
+
+// Send specific address and return all the transactions that were made by this address, and the current balance of this address. Either receiving or sending Addresses
+app.get('/address/:address', function (req, res) {
+    const address = req.params.address;
+    const addressData = bitcoin.getAddressData(address);
+    res.json({
+        addressData: addressData
+    });
+
+});
+
+app.get('/block-explorer', function (req, res) {
+    // Look into the directory we are currently in, and search the file in ./block-explorer/index.html
+    res.sendFile('./block-explorer/index.html', {root: __dirname});
 });
 
 app.listen(port, function () {

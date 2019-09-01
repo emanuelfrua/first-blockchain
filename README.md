@@ -1,5 +1,8 @@
 # My First Blockchain
 
+Hi, this is a basic blockchain in Javascrip that I did to learn how it works a blockchain. I added comments in every line to explain all the processes.
+It uses the Work of Proof method.
+
 Dependencies:
 
 NODEJS
